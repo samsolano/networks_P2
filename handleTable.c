@@ -39,7 +39,7 @@ void addHandle(char * name, int socketNum) {
         tableSize += 5;
     }
 
-    strncpy(handleTable[tableEntries].name, name, 100);
+    strncpy(handleTable[tableEntries].name, name, 100); //
     handleTable[tableEntries++].socket = socketNum;
 }
 
