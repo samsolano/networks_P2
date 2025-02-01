@@ -23,10 +23,12 @@
 
 int readFromStdin(uint8_t * buffer);
 void processStdin(int socketNumber);
-void splitMessage(uint8_t * sendBuf, int sendLen);
+void splitMessage(uint8_t * sendBuf, int sendLen, int socketNum);
 void processMessage(int socketNum);
-void packageMessage(uint8_t flag, uint8_t numOfDestinations, int socketNum);
+void packageMessage(uint8_t flag, int socketNum);
 void sendMessage(uint8_t * sendBuf, int sendLen, int socketNum);
+void packageBroadcast(uint8_t flag, int socketNum);
+void packageHandleList(uint8_t flag, int socketNum);
 
 
 #endif

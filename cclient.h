@@ -27,5 +27,9 @@
 void checkArgs(int argc, char * argv[]); 
 void clientControl(int socketNumber);  
 void processMsgFromServer(int socketNumber);
+void dissectMessage(uint8_t * dataBuffer, int messageLen, int socketNumber);
+void handleError(uint8_t * dataBuffer);
+void handleList(uint8_t * dataBuffer, int socketNumber);
+void checkHandle(int socketNum);
 
 #endif

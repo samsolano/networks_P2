@@ -1,8 +1,7 @@
 #include "handleTable.h"
 
-static Entry * handleTable;
-static int tableEntries = 0;
-static int tableSize = 0;
+
+
 
 void createTable() {
 
@@ -10,13 +9,25 @@ void createTable() {
     handleTable = (Entry *) sCalloc(tableSize, sizeof(Entry));
 }
 
-int lookupHandle(char * name) {
+int getEntries() {
+    return tableEntries;
+}
+
+int lookupHandle(char * name, int nameLength) {
+
+    char nameCopy[101];
+    memcpy(nameCopy, name, nameLength);
+    nameCopy[nameLength] = '\0';
+    // printf("%s entering lookupHandle()\n", nameCopy);
 
     for (int i = 0; i < tableEntries; i++) {
-        if (strcmp(handleTable[i].name, name) == 0) {
+        if (strcmp(handleTable[i].name, nameCopy) == 0) {
+            // printf("name: %s is in the table\n",nameCopy);
             return handleTable[i].socket;
         }
     }
+
+    // printf("name: %s is not in the handle table\n",nameCopy);
 
     return -1;
 }
@@ -32,18 +43,32 @@ char * lookupSocket(int socketNum) {
     return NULL;
 }
 
-void addHandle(char * name, int socketNum) {
+void addHandle(char * name, int nameLength, int socketNum) {
+
+    char nameCopy[101];
+    memcpy(nameCopy, name, nameLength);
+    nameCopy[nameLength] = '\0';
 
     if (tableEntries == tableSize) {
         handleTable = srealloc(handleTable, sizeof(Entry) * (tableSize + 5));
         tableSize += 5;
     }
 
-    strncpy(handleTable[tableEntries].name, name, 100); //
+    // printf("handle: %s has been added on socket: %d \n", nameCopy, socketNum);
+
+    strncpy(handleTable[tableEntries].name, nameCopy, 100); 
     handleTable[tableEntries++].socket = socketNum;
 }
 
-void removeHandle(char * name) {
+//how to get namelength to this
+
+void removeHandle(char * name) { 
+
+
+    // char nameCopy[101];
+    // memcpy(nameCopy, name, nameLength);
+    // nameCopy[nameLength] = '\0';
+
 
     int index = -1;
     
@@ -59,7 +84,7 @@ void removeHandle(char * name) {
         return;
     }
 
-    for(int i = index; i < tableEntries - 1; i++) {
+    for(int i = index; i < tableEntries - 1; i++) {         //move all handles down in array when one is removed
         handleTable[i] = handleTable[i + 1];
     }
 

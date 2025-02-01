@@ -17,7 +17,7 @@ char * destHandles[9] = {
     destClient7, destClient8, destClient9
 };
 
-uint8_t numOfDestinations = 0;
+int8_t numOfDestinations = 0;
 
 void processStdin(int socketNum) {
 	uint8_t sendBuf[MAXBUF];  
@@ -26,7 +26,12 @@ void processStdin(int socketNum) {
 	sendLen = readFromStdin(sendBuf);
 	// printf("read: %s string len: %d (including null)\n", sendBuf, sendLen);
 
-	splitMessage(sendBuf, sendLen);
+	if(sendLen > 1400) {
+		fprintf(stderr, "Error: cannot enter more than 1400 characters total\n");
+		return;
+	}
+
+	splitMessage(sendBuf, sendLen, socketNum);
 	processMessage(socketNum);
 
 }
@@ -38,7 +43,8 @@ void processStdin(int socketNum) {
 	- gets destination handles
 	- gets message to be sent  */
 
-void splitMessage(uint8_t * sendBuf, int sendLen) {
+void splitMessage(uint8_t * sendBuf, int sendLen, int socketNum) {
+
 
 	char copyCommand[sendLen];
 	strncpy(copyCommand, (char *)sendBuf, sendLen); 
@@ -47,32 +53,46 @@ void splitMessage(uint8_t * sendBuf, int sendLen) {
     char *token = strtok((char *)copyCommand, " ");  
 	uint8_t stateCounter = 0;                           //state 0 = getting command, state 1 = get num of destinations, state 2 = getting name, state 3 = getting message
 
+
+	if(strlen(token) > 2) {
+		fprintf(stderr, "Invalid Command format\n");
+		type[0] = 0;
+		return;
+	}
+
     while (token != NULL) {
 
-		if(stateCounter == 0) {                 //handle command
+		if(stateCounter == 0) {                         //handle command
 
 			strcpy(type, (char *)token);
 
-            if(!strcmp(type, "%m")) {
+
+            if(!strcmp(type, "%m") || !strcmp(type, "%M")) {
                 stateCounter = 2;
                 numOfDestinations = 1;
                 messageLength = 3;
-            } else if(!strcmp(type, "%c")) {
+            } else if(!strcmp(type, "%c") || !strcmp(type, "%C")) {
                 stateCounter = 1;
                 messageLength = 5;
-            } else if(!strcmp(type, "%b")) {
+            } else if(!strcmp(type, "%b") || !strcmp(type, "%B")) {
                 stateCounter = 3;
                 messageLength = 3;
+            } else if (!strcmp(type, "%l") || !strcmp(type, "%L")) {
+                return;
             } else {
-                perror("Command not recognized");
-                exit(-1);
+                fprintf(stderr, "Invalid Command\n");
+				type[0] = 0;
+				return;
             }
             token = strtok(NULL, " ");
 	    }
         else if (stateCounter == 1) {               //handle number of handles
-            if ((numOfDestinations = atoi(token)) == 0) {
-                perror("invalid num of destinations");
-                exit(-1);
+			numOfDestinations = atoi(token);
+            if (numOfDestinations <= 0 || numOfDestinations > 9) {
+				
+                fprintf(stderr, "invalid num of destinations\n");
+				type[0] = 0; // this is so in the next function called (processMessage()) the else block is reached and returns to polling again
+				return;
             }
             stateCounter = 2;
             token = strtok(NULL, " ");
@@ -81,9 +101,10 @@ void splitMessage(uint8_t * sendBuf, int sendLen) {
 
             int j = 0;
             for (int i = numOfDestinations; i > 0; i--) {
-                if(strlen((char *)token) > 101) {
-                    fprintf(stderr, "Error: %s is over 100 characters", (char *)token);
-                    exit(-1);
+                if(strlen((char *)token) > 100) {
+                    fprintf(stderr, "Error: %s is over 100 characters\n", (char *)token);
+                    type[0] = 0;
+					return;
                 }
                 messageLength += strlen((char *)token) + 1;
                 strcpy(destHandles[j++], (char *)token);
@@ -93,38 +114,98 @@ void splitMessage(uint8_t * sendBuf, int sendLen) {
                         //message is newline
                         return;
                     }
-                    perror("Error: not enough handles");
-                    exit(-1);
+                    fprintf(stderr, "Error: not enough handles\n");
+                    type[0] = 0;
+					return;
                 }
             }
             stateCounter = 3;
         }
         else if (stateCounter == 3) {                   //handle message
 
-            printf("\nchars in: %d, total length: %d\n", messageLength, sendLen - messageLength);
-
 			strncpy(message, (char *)(sendBuf + messageLength), sendLen - messageLength);
+            messageLength = sendLen - messageLength;
 			break;
         }
 	}
 } 
-//handle if %m and no handle,
+//handle if %m and no handle, and different cases with %c (no message, too few handles)
 
 void processMessage(int socketNum) {
 
-	if(!strcmp(type, "%m")) {
-		packageMessage(5, numOfDestinations, socketNum);
-	} else if(!strcmp(type, "%c")) {
-		packageMessage(6, numOfDestinations, socketNum);
-	} else if(!strcmp(type, "%b")) {
-		// packageMessage(4, numOfDestinations, socketNum);
-	} else if(!strcmp(type, "%l")) {
-		// packageMessage(10, numOfDestinations, socketNum);
+	if(!strcmp(type, "%m") || !strcmp(type, "%M")) {
+
+		packageMessage(5, socketNum);
+	} else if(!strcmp(type, "%c") || !strcmp(type, "%C")) {
+
+		packageMessage(6, socketNum);
+	} else if(!strcmp(type, "%b") || !strcmp(type, "%B")) {
+
+		packageBroadcast(4, socketNum);
+	} else if(!strcmp(type, "%l") || !strcmp(type, "%L")) {
+
+		packageHandleList(10, socketNum);
+	} else {
+		return;
 	}
-	
 }
 
-void packageMessage(uint8_t flag, uint8_t destNum, int socketNum) {
+void packageHandleList(uint8_t flag, int socketNum) {
+
+    uint8_t messageWithHeader = flag;
+
+    sendMessage(&messageWithHeader, 1, socketNum);
+}
+
+void packageBroadcast(uint8_t flag, int socketNum) {
+
+    //1 + 1 + possible 100 + possible 200 = 302
+
+    uint8_t messageWithHeader[302];
+	uint8_t lengthOfSelfHeader = strlen(selfHandle);
+
+	int tempMessageLength = messageLength;
+
+    if(tempMessageLength > 200) {
+
+
+		messageWithHeader[0] = flag;
+		messageWithHeader[1] = lengthOfSelfHeader;
+		memcpy(messageWithHeader + 2, selfHandle, lengthOfSelfHeader);
+
+		int byteIndex = 2 + lengthOfSelfHeader;
+		int currentPlaceInMessage = 0;
+		uint8_t zero = 0;
+
+		while(tempMessageLength > 200) {  //keep sending packets until message is finished
+
+			memcpy(messageWithHeader + byteIndex, message + currentPlaceInMessage, 199); 
+			currentPlaceInMessage += 199;
+			memcpy(messageWithHeader + byteIndex + 199, &zero, 1);
+			tempMessageLength -= 199;
+			sendMessage(messageWithHeader, byteIndex + 200, socketNum);
+		}
+
+		memcpy(messageWithHeader + byteIndex, message + currentPlaceInMessage, tempMessageLength); 
+		memcpy(messageWithHeader + byteIndex + tempMessageLength, &zero, 1);
+		sendMessage(messageWithHeader, byteIndex + tempMessageLength, socketNum);
+
+		return;
+
+	} else { 
+        
+        messageWithHeader[0] = flag;
+		messageWithHeader[1] = lengthOfSelfHeader;
+		memcpy(messageWithHeader + 2, selfHandle, lengthOfSelfHeader);
+		memcpy(messageWithHeader + lengthOfSelfHeader + 2, message, messageLength);
+    }
+
+    // printf("\nmessage Length: %d, total: %d\n", messageLength, messageLength + lengthOfSelfHeader + 2);
+
+    sendMessage(messageWithHeader, messageLength + lengthOfSelfHeader + 2, socketNum);
+}
+
+void packageMessage(uint8_t flag, int socketNum) {
 
 	// 1 + possible 100 + 1 + possible 9 + possible 900 + possible 200 = maximum of 1211 bytes in message
 
@@ -137,20 +218,15 @@ void packageMessage(uint8_t flag, uint8_t destNum, int socketNum) {
 
 	if(tempMessageLength > 200) {
 
-		while(tempMessageLength > 200) {  //keep sending packets until message is finished
-			tempMessageLength -= 200;
-		}
-
-	} else { 								//if message is less than 200 characters
 
 		messageWithHeader[0] = flag;
 		messageWithHeader[1] = lengthOfSelfHeader;
 		memcpy(messageWithHeader + 2, selfHandle, lengthOfSelfHeader);
-		messageWithHeader[lengthOfSelfHeader + 2] = destNum;
+		messageWithHeader[lengthOfSelfHeader + 2] = numOfDestinations;
 
 		int byteIndex = lengthOfSelfHeader + 3;
 
-		for(uint8_t i = 0; i < destNum; i++) { 	//put in handle lengths and destination handles into message header
+		for(uint8_t i = 0; i < numOfDestinations; i++) { 	//put in handle lengths and destination handles into message header
 
 			int currentDestHandleLength = strlen(destHandles[i]);
 			messageWithHeader[byteIndex++] = currentDestHandleLength;
@@ -158,7 +234,46 @@ void packageMessage(uint8_t flag, uint8_t destNum, int socketNum) {
 			byteIndex += currentDestHandleLength;
 		}
 
-		memcpy(messageWithHeader + byteIndex, message, messageLength);
+		totalLength = byteIndex + messageLength;
+
+		int currentPlaceInMessage = 0;
+		uint8_t zero = 0;
+		
+		
+
+		while(tempMessageLength > 200) {  //keep sending packets until message is finished
+
+			memcpy(messageWithHeader + byteIndex, message + currentPlaceInMessage, 199); 
+			currentPlaceInMessage += 199;
+			memcpy(messageWithHeader + byteIndex + 199, &zero, 1);
+			tempMessageLength -= 199;
+			sendMessage(messageWithHeader, byteIndex + 200, socketNum);
+		}
+
+		memcpy(messageWithHeader + byteIndex, message + currentPlaceInMessage, tempMessageLength); 
+		memcpy(messageWithHeader + byteIndex + tempMessageLength, &zero, 1);
+		sendMessage(messageWithHeader, byteIndex + tempMessageLength, socketNum);
+
+		return;
+
+	} else { 								//if message is less than 200 characters
+
+		messageWithHeader[0] = flag;
+		messageWithHeader[1] = lengthOfSelfHeader;
+		memcpy(messageWithHeader + 2, selfHandle, lengthOfSelfHeader);
+		messageWithHeader[lengthOfSelfHeader + 2] = numOfDestinations;
+
+		int byteIndex = lengthOfSelfHeader + 3;
+
+		for(uint8_t i = 0; i < numOfDestinations; i++) { 	//put in handle lengths and destination handles into message header
+
+			int currentDestHandleLength = strlen(destHandles[i]);
+			messageWithHeader[byteIndex++] = currentDestHandleLength;
+			memcpy(&messageWithHeader[byteIndex], destHandles[i], currentDestHandleLength);
+			byteIndex += currentDestHandleLength;
+		}
+        // printf("\nmessageLength: %d, byteIndex: %d\n", messageLength, byteIndex);
+		memcpy(messageWithHeader + byteIndex, message, messageLength); 
 
 		totalLength = byteIndex + messageLength;
 	}
@@ -169,37 +284,40 @@ void packageMessage(uint8_t flag, uint8_t destNum, int socketNum) {
 void sendMessage(uint8_t * sendBuf, int sendLen, int socketNum) {
 
     //-------------------------- For Debugging the parts of the command --------------------------//
-    printf("\ncommand: %s, dest num: %d, handles: ", type, numOfDestinations);
-    for(int i = 0; i < numOfDestinations; i++) {
-        printf("%d: %s, ",i + 1, destHandles[i]);
-    }
-    printf("message: %s\n", message);
+
+    // printf("\nWords: \n");
+    // printf("command: %s, dest num: %d, handles
+	// ", type, numOfDestinations);
+    // for(int i = 0; i < numOfDestinations; i++) {
+    //     printf("%d: %s, ",i + 1, destHandles[i]);
+    // }
+    // printf("message: %s\n", message);
 
     //-------------------------------------------------------------------------------------------//
 
 
     //-------------------------- For Debugging the bytes ----------------------------------------//
-	// printf("\n");
+    // printf("\nBytes: \n");
 	// for (int i = 0; i < sendLen; i++) {
 	// 	printf("%02x ", sendBuf[i]);
 	// }
-	// printf("\n");
+	// printf("\n\n");
     //------------------------------------------------------------------------------------------//
 
-	return;
+	// return;
 
 
 
 
 
-	// int sent = 0;
+	int sent = 0;
 
-	// sent =  sendPDU(socketNum, sendBuf, sendLen);
-	// if (sent < 0)
-	// {
-	// 	perror("send call");
-	// 	exit(-1);
-	// }
+	sent =  sendPDU(socketNum, sendBuf, sendLen);
+	if (sent < 0)
+	{
+		perror("send call");
+		exit(-1);
+	}
 
 	// printf("Amount of data sent is: %d\n", sent);
 
