@@ -1,5 +1,8 @@
 #include "handleTable.h"
 
+int tableEntries = 0;
+int tableSize = 0;
+
 void createTable() {
 
     tableSize = START_SIZE;
@@ -36,7 +39,6 @@ char * lookupSocket(int socketNum) {
             return handleTable[i].name;
         }
     }
-
     return NULL;
 }
 

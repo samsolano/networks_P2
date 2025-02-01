@@ -1,3 +1,6 @@
+#ifndef HANDLETABLE_H
+#define HANDLETABLE_H
+
 #include "safeUtil.h"
 
 #define START_SIZE 10
@@ -17,5 +20,7 @@ void   printTable();
 
 
 Entry * handleTable;
-static int tableEntries = 0;
-static int tableSize = 0;
+
+
+
+#endif
