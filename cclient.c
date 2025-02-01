@@ -6,14 +6,12 @@
 int main(int argc, char * argv[])
 {
 
-
-	int socketNum = 0;         //socket descriptor
+	int socketNum = 0;       
 	
 	checkArgs(argc, argv);
 
 	/* set up the TCP Client socket  */
 	socketNum = tcpClientSetup(argv[2], argv[3], DEBUG_FLAG);
-
 
 	checkHandle(socketNum);
 	
@@ -55,9 +53,6 @@ void checkHandle(int socketNum) {
 			addToPollSet(STDIN_FILENO);
 			break;
 		}
-
-		// int c;
-		// while ((c = getchar()) != '\n' && c != EOF);				// for flushing STDIN_FILENO
 	}
 }
 
@@ -107,13 +102,6 @@ void processMsgFromServer(int socketNumber) {
 	printf("\nServer terminated\n");
 	exit(0);
 }
-
-
-
-
-
-
-
 
 void dissectMessage(uint8_t * dataBuffer, int messageLen, int socketNumber) {
 
@@ -208,8 +196,6 @@ void handleList(uint8_t * dataBuffer, int socketNumber) {
 }
 
 void handleError(uint8_t * dataBuffer) {
-	// Format: chat-header then 1 byte handle length then handle of the destination 
-	// client (the one not found on the server) as specified in the flag = 5 or flag = 6 message.
 
 	int length = dataBuffer[1];
 
@@ -244,14 +230,3 @@ void checkArgs(int argc, char * argv[])
 	
 
 }
-
-
-
-
-
-// if text message is larger than 1400
-// handle larger than 100
-// no message is new line
-// if i just send zion
-
-// aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

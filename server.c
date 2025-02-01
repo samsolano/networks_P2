@@ -68,30 +68,7 @@ int main(int argc, char *argv[])
 	int clientSocket = 0;   //socket descriptor for the client socket
 	int portNumber = 0;
 	
-	portNumber = checkArgs(argc, argv);
-
-
-	// createTable();
-
-	// addHandle("sam", 3, 23);
-	// addHandle("ceelos", 6, 24);
-	// addHandle("ryan", 4, 3);
-	// addHandle("lalo", 4, 2);
-
-
-	// printTable();
-
-	// printf("\n");
-
-	// removeHandle(lookupSocket(23));
-
-	// printTable();
-
-	// return 0;
-
-
-
-	
+	portNumber = checkArgs(argc, argv);	
 	
 	//create the server socket
 	mainServerSocket = tcpServerSetup(portNumber);
@@ -119,13 +96,6 @@ void serverControl(int socketNumber) {
 
 		socketReturned = pollCall(-1);
 
-		// if (socketReturned == 0) {
-		// 	continue; //closed connection
-		// }
-		// if (socketReturned < 0) {
-		// 	break; //error
-		// }
-
 		if ( socketReturned == socketNumber ) {
 			addNewSocket(socketReturned);
 		} else {
@@ -135,12 +105,8 @@ void serverControl(int socketNumber) {
 
 }
 
-//
-
 
 void processClient(int socketNumber) {
-
-	// printf("process client 1\n");
 
     uint8_t dataBuffer[MAXBUF];
 	int messageLen = 0;
@@ -156,7 +122,8 @@ void processClient(int socketNumber) {
 	} else if (messageLen > 0) {
 		dissectClientMessage(dataBuffer, socketNumber, messageLen);
 		clearHandles();
-		// printf("Message received on socket: %d, length: %d Data: %s\n", socketNumber, messageLen, dataBuffer);
+		// printf("length: %d Data: %s\n", messageLen, dataBuffer);
+		memset(dataBuffer, 0, MAXBUF);
 		// sendPDU(socketNumber, dataBuffer, messageLen);
 		return;
 	} 
@@ -164,7 +131,7 @@ void processClient(int socketNumber) {
 	close(socketNumber);
 	removeFromPollSet(socketNumber);
 	removeHandle(lookupSocket(socketNumber));
-	printf("Connection closed by other side\n");
+	// printf("Connection closed by other side\n");
 
 }
 
@@ -254,14 +221,6 @@ void processClientMessage(uint8_t * dataBuffer, int socketNumber, int flag, int 
 
 void sendMessageToClient(uint8_t * dataBuffer, int socketNumber, int numOfDestinations, int messageLen) {
 
-	//if numOfDest is 0 then its a broadcast, else, loop through all destinations, check to see if they exist
-	// then send the data buffer to those sockets
-
-	//message length is total length of packet, not just the message portion of packet
-
-	// printf("handle: %s\n",destHandlesServer[0]);
-
-
 	if(numOfDestinations > 0) {
 
 		// printf("handle: ");
@@ -299,8 +258,6 @@ void sendMessageToClient(uint8_t * dataBuffer, int socketNumber, int numOfDestin
 		}
 
 	}
-
-
 }
 
 
@@ -320,10 +277,6 @@ void handleError(char * handleName, int socketNumber) {
 	sendPDU(socketNumber, packet, handleLength + 2);
 
 }
-
-
-
-
 
 
 void verifyHandle(uint8_t * dataBuffer, int socketNumber) {
@@ -346,13 +299,6 @@ void verifyHandle(uint8_t * dataBuffer, int socketNumber) {
 	sendPDU(socketNumber, &flag, 1);
 }
 
-
-
-
-
-
-
-
 void addNewSocket(int socketNumber) {
 
     // struct sockaddr_in6 clientAddress;   
@@ -371,33 +317,6 @@ void addNewSocket(int socketNumber) {
 
     addToPollSet(client_socket);
 }
-
-
-
-
-
-
-// void recvFromClient(int clientSocket)
-// {
-// 	uint8_t dataBuffer[MAXBUF];
-// 	int messageLen = 0;
-	
-// 	//now get the data from the client_socket
-// 	if ((messageLen = recvPDU(clientSocket, dataBuffer, MAXBUF)) < 0)
-// 	{
-// 		perror("recv call");
-// 		exit(-1);
-// 	}
-
-// 	if (messageLen > 0)
-// 	{
-// 		printf("Message received, length: %d Data: %s\n", messageLen, dataBuffer);
-// 	}
-// 	else
-// 	{
-// 		printf("Connection closed by other side\n");
-// 	}
-// }
 
 int checkArgs(int argc, char *argv[])
 {
@@ -424,6 +343,3 @@ void clearHandles() {
 		memset(destHandlesServer[i], 0, 101);
 	}
 }
-//make changes to support removing names from handle table corerctly
-
-//when i send %l and then close client server goes on loop

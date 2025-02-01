@@ -205,6 +205,11 @@ void packageBroadcast(uint8_t flag, int socketNum) {
     sendMessage(messageWithHeader, messageLength + lengthOfSelfHeader + 2, socketNum);
 }
 
+
+
+/* This function handles both message %m and multicast %c and the function is split into two parts
+	whether or not the message is larger than 200 characters*/
+
 void packageMessage(uint8_t flag, int socketNum) {
 
 	// 1 + possible 100 + 1 + possible 9 + possible 900 + possible 200 = maximum of 1211 bytes in message
@@ -283,33 +288,6 @@ void packageMessage(uint8_t flag, int socketNum) {
 
 void sendMessage(uint8_t * sendBuf, int sendLen, int socketNum) {
 
-    //-------------------------- For Debugging the parts of the command --------------------------//
-
-    // printf("\nWords: \n");
-    // printf("command: %s, dest num: %d, handles
-	// ", type, numOfDestinations);
-    // for(int i = 0; i < numOfDestinations; i++) {
-    //     printf("%d: %s, ",i + 1, destHandles[i]);
-    // }
-    // printf("message: %s\n", message);
-
-    //-------------------------------------------------------------------------------------------//
-
-
-    //-------------------------- For Debugging the bytes ----------------------------------------//
-    // printf("\nBytes: \n");
-	// for (int i = 0; i < sendLen; i++) {
-	// 	printf("%02x ", sendBuf[i]);
-	// }
-	// printf("\n\n");
-    //------------------------------------------------------------------------------------------//
-
-	// return;
-
-
-
-
-
 	int sent = 0;
 
 	sent =  sendPDU(socketNum, sendBuf, sendLen);
@@ -348,3 +326,30 @@ int readFromStdin(uint8_t * buffer)
 	
 	return inputLen;
 }
+
+
+    //-------------------------- For Debugging the parts of the command --------------------------//
+
+    // printf("\nWords: \n");
+    // printf("command: %s, dest num: %d, handles
+	// ", type, numOfDestinations);
+    // for(int i = 0; i < numOfDestinations; i++) {
+    //     printf("%d: %s, ",i + 1, destHandles[i]);
+    // }
+    // printf("message: %s\n", message);
+
+    //-------------------------------------------------------------------------------------------//
+
+
+    //-------------------------- For Debugging the bytes ----------------------------------------//
+    // printf("\nBytes: \n");
+	// for (int i = 0; i < sendLen; i++) {
+	// 	printf("%02x ", sendBuf[i]);
+	// }
+	// printf("\n\n");
+    //------------------------------------------------------------------------------------------//
+
+	// return;
+
+
+

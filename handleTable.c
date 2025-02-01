@@ -1,8 +1,5 @@
 #include "handleTable.h"
 
-
-
-
 void createTable() {
 
     tableSize = START_SIZE;
@@ -63,12 +60,6 @@ void addHandle(char * name, int nameLength, int socketNum) {
 //how to get namelength to this
 
 void removeHandle(char * name) { 
-
-
-    // char nameCopy[101];
-    // memcpy(nameCopy, name, nameLength);
-    // nameCopy[nameLength] = '\0';
-
 
     int index = -1;
     

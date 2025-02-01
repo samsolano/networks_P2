@@ -32,13 +32,3 @@ void packageHandleList(uint8_t flag, int socketNum);
 
 
 #endif
-
-// char * destHandles[9] = {0}; //array of strings
-// destHandles[0] = destClient1;
-// destHandles[1] = destClient2;
-// destHandles[2] = destClient3;
-// destHandles[3] = destClient4;
-// destHandles[4] = destClient5;
-// destHandles[5] = destClient6;
-// destHandles[6] = destClient7;
-// destHandles[7] = destClient8;
